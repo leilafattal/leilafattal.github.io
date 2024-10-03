@@ -1,33 +1,49 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Photography Gallery</title>
   <style>
     body {
+      background-color: #f0f0f0;
       font-family: Arial, sans-serif;
-      margin: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
     }
+
     .gallery img {
       width: 200px;
       margin: 10px;
+      border-radius: 10%;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      transition: box-shadow 0.3s ease, transform 0.5s ease;
+    }
+
+    .gallery img:hover {
+      transform: scale(1.05);
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+      cursor: pointer;
     }
   </style>
 </head>
+
 <body>
   <h1>Photography Gallery</h1>
-  
+
   <!-- File Upload Section -->
   <div>
     <input type="file" id="fileInput" />
     <button id="uploadButton">Upload</button>
   </div>
-  
+
   <!-- Image Gallery Section -->
   <h2>Uploaded Images</h2>
   <div class="gallery" id="gallery"></div>
-  
+
   <script type="module">
     import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 
@@ -39,7 +55,7 @@
     const bucket = "photography.1";
 
     // Upload file function
-    window.uploadFile = async function() {
+    window.uploadFile = async function () {
       const fileInput = document.getElementById('fileInput');
       const file = fileInput.files[0];
 
@@ -81,11 +97,12 @@
 
       console.log(data);
 
-      data.forEach((img) => {
-        const imgElement = document.createElement('img');
-        imgElement.src = `${supabaseUrl}/storage/v1/object/public/photography/public/${img.name}`;
-        imgElement.alt = img.name;
-        galleryDiv.appendChild(imgElement);
+      data.forEach(async (file) => {
+        const publicURL = supabase.storage.from(bucket).getPublicUrl(file.name);
+        console.log(publicURL.data.publicUrl);
+        const imageItem = document.createElement('img');
+        imageItem.src = publicURL.data.publicUrl;
+        galleryDiv.appendChild(imageItem);
       });
     }
 
@@ -96,5 +113,5 @@
     document.getElementById('uploadButton').addEventListener('click', window.uploadFile);
   </script>
 </body>
-</html>
 
+</html>
