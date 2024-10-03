@@ -34,6 +34,12 @@
 <body>
   <h1>Photography Gallery</h1>
 
+  <!-- File Upload Section -->
+  <div>
+    <input type="file" id="fileInput" />
+    <button id="uploadButton">Upload</button>
+  </div>
+
   <!-- Image Gallery Section -->
   <h2>Uploaded Images</h2>
   <div class="gallery" id="gallery"></div>
@@ -47,6 +53,28 @@
     const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
     const bucket = "photography.1";
+
+    // Upload file function
+    window.uploadFile = async function () {
+      const fileInput = document.getElementById('fileInput');
+      const file = fileInput.files[0];
+
+      if (file) {
+        const { data, error } = await supabase.storage
+          .from(bucket)
+          .upload(`${file.name}`, file);
+
+        if (error) {
+          console.error(error);
+          alert('Upload failed!');
+        } else {
+          alert('File uploaded successfully!');
+          fetchImages();  // Refresh gallery after upload
+        }
+      } else {
+        alert('Please select a file to upload.');
+      }
+    };
 
     // Fetch and display images in the gallery
     async function fetchImages() {
@@ -81,6 +109,8 @@
     // Fetch images on page load
     window.onload = fetchImages;
 
+    // Attach the upload function to the button
+    document.getElementById('uploadButton').addEventListener('click', window.uploadFile);
   </script>
 </body>
 
