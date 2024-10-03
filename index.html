@@ -21,7 +21,7 @@
   <!-- File Upload Section -->
   <div>
     <input type="file" id="fileInput" />
-    <button onclick="uploadFile()">Upload</button>
+    <button id="uploadButton">Upload</button>
   </div>
   
   <!-- Image Gallery Section -->
@@ -30,52 +30,71 @@
   
   <script type="module">
     import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+
     // Initialize Supabase
     const supabaseUrl = 'https://kfrjmqebnjwpnzafbwys.supabase.co';  // Replace with your Supabase URL
     const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtmcmptcWVibmp3cG56YWZid3lzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTcyNzkxMzE0OSwiZXhwIjoyMDQzNDg5MTQ5fQ.XTHT8deRRj95NbPu4zysBACmv9sj-_kSowKLJ6E-zMw';  // Replace with your public anon key
-    const supabase = supabase.createClient(supabaseUrl, supabaseAnonKey);
+    const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+    const bucket = "photography.1";
 
     // Upload file function
-    async function uploadFile() {
+    window.uploadFile = async function() {
       const fileInput = document.getElementById('fileInput');
       const file = fileInput.files[0];
 
       if (file) {
         const { data, error } = await supabase.storage
-          .from('photography')
-          .upload(`public/${file.name}`, file);
+          .from(bucket)
+          .upload(`${file.name}`, file);
 
         if (error) {
           console.error(error);
+          alert('Upload failed!');
         } else {
           alert('File uploaded successfully!');
           fetchImages();  // Refresh gallery after upload
         }
+      } else {
+        alert('Please select a file to upload.');
       }
-    }
+    };
 
     // Fetch and display images in the gallery
     async function fetchImages() {
       const { data, error } = await supabase.storage
-        .from('photography')
-        .list('public', { limit: 100 });
+        .from(bucket)
+        .list('', { limit: 100 });
 
       if (error) {
         console.error(error);
-      } else {
-        const galleryDiv = document.getElementById('gallery');
-        galleryDiv.innerHTML = '';  // Clear existing images
-        data.forEach((img) => {
-          const imgElement = document.createElement('img');
-          imgElement.src = `${supabaseUrl}/storage/v1/object/public/photography/public/${img.name}`;
-          imgElement.alt = img.name;
-          galleryDiv.appendChild(imgElement);
-        });
+        return;
       }
+
+      const galleryDiv = document.getElementById('gallery');
+      galleryDiv.innerHTML = '';  // Clear existing images
+
+      if (data.length === 0) {
+        galleryDiv.innerHTML = '<p>No images found.</p>';
+        return;
+      }
+
+      console.log(data);
+
+      data.forEach((img) => {
+        const imgElement = document.createElement('img');
+        imgElement.src = `${supabaseUrl}/storage/v1/object/public/photography/public/${img.name}`;
+        imgElement.alt = img.name;
+        galleryDiv.appendChild(imgElement);
+      });
     }
 
     // Fetch images on page load
     window.onload = fetchImages;
+
+    // Attach the upload function to the button
+    document.getElementById('uploadButton').addEventListener('click', window.uploadFile);
   </script>
 </body>
 </html>
+
