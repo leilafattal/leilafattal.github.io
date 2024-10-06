@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Admin Page</title>
+  <title>Admin</title>
   <style>
     body {
       background-color: #f0f0f0;
@@ -28,12 +28,11 @@
       box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
       cursor: pointer;
     }
-    
   </style>
 </head>
 
 <body>
-  <h1>Admin Page</h1>
+  <h1>Admin</h1>
 
   <!-- File Upload Section -->
   <div>
@@ -42,6 +41,7 @@
   </div>
 
   <!-- Image Gallery Section -->
+  <h2>Uploaded Images</h2>
   <div class="gallery" id="gallery"></div>
 
   <script type="module">
@@ -52,7 +52,7 @@
     const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtmcmptcWVibmp3cG56YWZid3lzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTcyNzkxMzE0OSwiZXhwIjoyMDQzNDg5MTQ5fQ.XTHT8deRRj95NbPu4zysBACmv9sj-_kSowKLJ6E-zMw';  // Replace with your public anon key
     const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-    const bucket = "photography.1";
+    const bucket = "photography.1";  // Using 'Admin' as the bucket name
 
     // Upload file function
     window.uploadFile = async function () {
@@ -62,7 +62,7 @@
       if (file) {
         const { data, error } = await supabase.storage
           .from(bucket)
-          .upload(`${file.name}`, file);
+          .upload(file.name, file);
 
         if (error) {
           console.error(error);
@@ -95,21 +95,33 @@
         return;
       }
 
-      console.log(data);
-
       data.forEach(async (file) => {
         const publicURL = supabase.storage.from(bucket).getPublicUrl(file.name);
-        console.log(publicURL.data.publicUrl);
         const imageItem = document.createElement('img');
         imageItem.src = publicURL.data.publicUrl;
 
-        // Add right-click event for deleting images
+        // Add right-click event for deleting images on desktop
         imageItem.addEventListener('contextmenu', (event) => {
           event.preventDefault();  // Prevent the default context menu from appearing
           const confirmDelete = confirm('Are you sure you want to delete this photo?');
           if (confirmDelete) {
             deleteImage(file.name);
           }
+        });
+
+        // Add press-and-hold event for mobile
+        let touchTimer;
+        imageItem.addEventListener('touchstart', (event) => {
+          touchTimer = setTimeout(() => {
+            const confirmDelete = confirm('Are you sure you want to delete this photo?');
+            if (confirmDelete) {
+              deleteImage(file.name);
+            }
+          }, 1000); // Trigger delete after 1 second of holding
+        });
+
+        imageItem.addEventListener('touchend', () => {
+          clearTimeout(touchTimer);  // Cancel if the touch is released before 1 second
         });
 
         galleryDiv.appendChild(imageItem);
@@ -137,3 +149,5 @@
 </body>
 
 </html>
+
+
