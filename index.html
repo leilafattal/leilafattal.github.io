@@ -15,7 +15,50 @@
       justify-content: center;
     }
 
-    .gallery img {
+    .gallery {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .album-cover {
+      position: relative;
+      width: 200px;
+      height: 200px;
+      margin: 10px;
+      border-radius: 10%;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      transition: box-shadow 0.3s ease, transform 0.5s ease;
+      overflow: hidden;
+    }
+
+    .album-cover:hover {
+      transform: scale(1.05);
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+      cursor: pointer;
+    }
+
+    .album-cover img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center;
+      transition: none;
+    }
+
+    .album-cover div {
+      position: absolute;
+      bottom: 0;
+      width: 100%;
+      background-color: rgba(0, 0, 0, 0.5);
+      color: white;
+      text-align: center;
+      font-weight: bold;
+      padding: 5px;
+      box-sizing: border-box;
+    }
+
+    .gallery-image {
       width: 200px;
       margin: 10px;
       border-radius: 10%;
@@ -23,10 +66,18 @@
       transition: box-shadow 0.3s ease, transform 0.5s ease;
     }
 
-    .gallery img:hover {
+    .gallery-image:hover {
       transform: scale(1.05);
       box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
       cursor: pointer;
+    }
+
+    .back-button {
+      font-size: 1.2em;
+      margin: 20px;
+      cursor: pointer;
+      color: #007BFF;
+      text-decoration: underline;
     }
 
     /* Fullscreen Overlay */
@@ -46,6 +97,12 @@
       max-width: 90%;
       max-height: 90%;
       border-radius: 10px;
+      opacity: 0.8;
+      transition: opacity 0.3s ease;
+    }
+
+    .overlay.show img:hover {
+      opacity: 1;
     }
 
     .overlay.show {
@@ -60,11 +117,14 @@
       color: white;
       cursor: pointer;
     }
-  </style>
+</style>  
 </head>
 
 <body>
-  <h1>Leila's Photography Gallery</h1>
+  <h1 id="galleryTitle">Leila's Photography Gallery</h1>
+
+  <!-- Back Button -->
+  <div class="back-button" id="backButton" style="display: none;">← Back to Albums</div>
 
   <!-- Image Gallery Section -->
   <div class="gallery" id="gallery"></div>
@@ -85,11 +145,11 @@
 
     const bucket = "photography.1";  // Your Supabase bucket name
 
-    // Fetch and display images in the gallery
-    async function fetchImages() {
-      const { data, error } = await supabase.storage
+    // Fetch and display folders in the gallery
+    async function fetchFolders() {
+      const { data: items, error } = await supabase.storage
         .from(bucket)
-        .list('', { limit: 100 });
+        .list('', { limit: 100, sortBy: { column: 'name' } });
 
       if (error) {
         console.error(error);
@@ -97,27 +157,92 @@
       }
 
       const galleryDiv = document.getElementById('gallery');
-      galleryDiv.innerHTML = '';  // Clear existing images
+      galleryDiv.innerHTML = '';  // Clear existing content
+      document.getElementById('backButton').style.display = 'none';  // Hide back button on main page
+      document.getElementById('galleryTitle').textContent = "Leila's Photography Gallery";  // Reset title
 
-      if (data.length === 0) {
-        galleryDiv.innerHTML = '<p>No images found.</p>';
+      if (items.length === 0) {
+        galleryDiv.innerHTML = '<p>No albums found.</p>';
         return;
       }
 
-      data.forEach(async (file) => {
-        const publicURL = supabase.storage.from(bucket).getPublicUrl(file.name);
+      // Filter out files and keep only folders (no extension in name)
+      const folderList = items.filter(item => !item.name.includes('.'));
+
+      folderList.forEach(async (folder) => {
+        const albumCover = document.createElement('div');
+        albumCover.classList.add('album-cover');
+
+        // Fetch the first image from the folder
+        const { data: images, error: imageError } = await supabase.storage
+          .from(bucket)
+          .list(folder.name, { limit: 1 });
+
+        if (imageError || images.length === 0) {
+          console.error(imageError || 'No images found in the folder');
+          return;
+        }
+
+        const firstImageURL = supabase.storage.from(bucket).getPublicUrl(`${folder.name}/${images[0].name}`).data.publicUrl;
+
+        // Create album cover image and title
+        const imgElement = document.createElement('img');
+        imgElement.src = firstImageURL;
+
+        const titleElement = document.createElement('div');
+        titleElement.classList.add('album-title');
+        titleElement.textContent = folder.name;
+
+        albumCover.appendChild(imgElement);
+        albumCover.appendChild(titleElement);
+
+        // Add click event to open album view
+        albumCover.addEventListener('click', () => openAlbum(folder.name));
+
+        galleryDiv.appendChild(albumCover);
+      });
+    }
+
+    // Open an album and show its images
+    async function openAlbum(albumName) {
+      const { data: images, error } = await supabase.storage
+        .from(bucket)
+        .list(albumName, { limit: 100 });
+
+      if (error) {
+        console.error(error);
+        return;
+      }
+
+      const galleryDiv = document.getElementById('gallery');
+      galleryDiv.innerHTML = '';  // Clear current gallery
+
+      images.forEach(async (file) => {
+        const publicURL = supabase.storage.from(bucket).getPublicUrl(`${albumName}/${file.name}`).data.publicUrl;
         const imageItem = document.createElement('img');
-        imageItem.src = publicURL.data.publicUrl;
+        imageItem.src = publicURL;
+        imageItem.classList.add('gallery-image'); // Add a class for styling
         galleryDiv.appendChild(imageItem);
 
-        // Add click event for zooming
+        // Add click event for zooming (overlay)
         imageItem.addEventListener('click', () => {
           const zoomedImage = document.getElementById('zoomedImage');
-          zoomedImage.src = publicURL.data.publicUrl;
+          zoomedImage.src = publicURL;
           document.getElementById('overlay').classList.add('show');
         });
       });
+
+      // Update gallery title with the album name
+
+      document.getElementById('galleryTitle').textContent = albumName;
+      // Show the back button
+      document.getElementById('backButton').style.display = 'block';
     }
+
+    // Back to the main gallery view
+    document.getElementById('backButton').addEventListener('click', () => {
+      fetchFolders();
+    });
 
     // Close zoom overlay
     document.getElementById('closeBtn').addEventListener('click', () => {
@@ -131,8 +256,8 @@
       }
     });
 
-    // Fetch images on page load
-    window.onload = fetchImages;
+    // Fetch folders on page load
+    window.onload = fetchFolders;
   </script>
 </body>
 
