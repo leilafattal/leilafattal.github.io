@@ -28,6 +28,38 @@
       box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
       cursor: pointer;
     }
+
+    /* Fullscreen Overlay */
+    .overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.8);
+      display: none;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .overlay img {
+      max-width: 90%;
+      max-height: 90%;
+      border-radius: 10px;
+    }
+
+    .overlay.show {
+      display: flex;
+    }
+
+    .close-btn {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      font-size: 24px;
+      color: white;
+      cursor: pointer;
+    }
   </style>
 </head>
 
@@ -37,6 +69,12 @@
   <!-- Image Gallery Section -->
   <div class="gallery" id="gallery"></div>
 
+  <!-- Fullscreen Overlay for Zoom -->
+  <div class="overlay" id="overlay">
+    <span class="close-btn" id="closeBtn">&times;</span>
+    <img id="zoomedImage" src="" alt="Zoomed Image" />
+  </div>
+
   <script type="module">
     import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 
@@ -45,7 +83,7 @@
     const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtmcmptcWVibmp3cG56YWZid3lzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTcyNzkxMzE0OSwiZXhwIjoyMDQzNDg5MTQ5fQ.XTHT8deRRj95NbPu4zysBACmv9sj-_kSowKLJ6E-zMw';  // Replace with your public anon key
     const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-    const bucket = "photography.1";
+    const bucket = "photography.1";  // Your Supabase bucket name
 
     // Fetch and display images in the gallery
     async function fetchImages() {
@@ -66,20 +104,35 @@
         return;
       }
 
-      console.log(data);
-
       data.forEach(async (file) => {
         const publicURL = supabase.storage.from(bucket).getPublicUrl(file.name);
-        console.log(publicURL.data.publicUrl);
         const imageItem = document.createElement('img');
         imageItem.src = publicURL.data.publicUrl;
         galleryDiv.appendChild(imageItem);
+
+        // Add click event for zooming
+        imageItem.addEventListener('click', () => {
+          const zoomedImage = document.getElementById('zoomedImage');
+          zoomedImage.src = publicURL.data.publicUrl;
+          document.getElementById('overlay').classList.add('show');
+        });
       });
     }
 
+    // Close zoom overlay
+    document.getElementById('closeBtn').addEventListener('click', () => {
+      document.getElementById('overlay').classList.remove('show');
+    });
+
+    // Close zoom overlay by clicking outside the image
+    document.getElementById('overlay').addEventListener('click', (event) => {
+      if (event.target === event.currentTarget) {
+        document.getElementById('overlay').classList.remove('show');
+      }
+    });
+
     // Fetch images on page load
     window.onload = fetchImages;
-
   </script>
 </body>
 
