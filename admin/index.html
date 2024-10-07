@@ -33,7 +33,7 @@
   <div class="gallery" id="gallery"></div>
 
   <script type="module">
-    import { fetchFolders, fetchAlbumImages, supabase, bucket } from '../gallery.js';
+    import { fetchAdminFolders, fetchAlbumImages, supabase, bucket } from '../gallery.js';
 
     const galleryDiv = document.getElementById('gallery');
     const backButton = document.getElementById('backButton');
@@ -109,7 +109,7 @@
 
     backButton.addEventListener('click', () => {
       newAlbumSection.style.display = 'flex';
-      fetchFolders(galleryDiv, titleElement, backButton, openAlbum);  // Fetch albums (folders) view
+      fetchAdminFolders(galleryDiv, titleElement, backButton, openAlbum);  // Fetch albums (folders) view
       document.getElementById('uploadSection').style.display = 'none';  // Hide upload section when showing albums
       backButton.classList.add('back-button-hidden');  // Hide the back button
       history.pushState(null, null, window.location.pathname);  // Update browser history
@@ -118,7 +118,7 @@
     // Handle browser back button (popstate event)
     window.addEventListener('popstate', () => {
       // Trigger the same back button behavior as if clicking "Back to Albums"
-      fetchFolders(galleryDiv, titleElement, backButton, openAlbum);
+      fetchAdminFolders(galleryDiv, titleElement, backButton, openAlbum);
       document.getElementById('uploadSection').style.display = 'none';  // Hide upload section
       backButton.classList.add('back-button-hidden');  // Hide the back button
     });
@@ -340,7 +340,7 @@
 
 
     window.onload = () => {
-      fetchFolders(galleryDiv, titleElement, backButton, openAlbum);
+      fetchAdminFolders(galleryDiv, titleElement, backButton, openAlbum);
       newAlbumSection.style.display = 'flex'; // Re-show album creation section}
     }
     window.deleteImage = deleteImage;  // Expose deleteImage globally
