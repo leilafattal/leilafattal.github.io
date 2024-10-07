@@ -12,7 +12,7 @@
   <h1 id="galleryTitle">Leila's Photography Gallery</h1>
 
   <!-- Back Button -->
-  <div class="back-button" id="backButton" style="display: none;">← Back to Albums</div>
+  <button id="backButton" class="back-button back-button-hidden">← Back to Albums</button>
 
   <!-- Image Gallery Section -->
   <div class="gallery" id="gallery"></div>
@@ -28,12 +28,30 @@
       fetchAlbumImages(albumName, galleryDiv, titleElement, backButton, likeImage);
     }
 
-    backButton.addEventListener('click', () => {
-      fetchFolders(galleryDiv, titleElement, backButton, openAlbum);
-    });
-
     window.onload = () => fetchFolders(galleryDiv, titleElement, backButton, openAlbum);
     window.likeImage = likeImage;  // Expose likeImage globally
+    // Back to the main gallery (albums) view
+
+
+    backButton.addEventListener('click', () => {
+      fetchFolders(galleryDiv, titleElement, backButton, openAlbum);  // Fetch albums (folders) view
+      document.getElementById('uploadSection').style.display = 'none';  // Hide upload section when showing albums
+      backButton.classList.add('back-button-hidden');  // Hide the back button
+      history.pushState(null, null, window.location.pathname);  // Update browser history
+    });
+
+    // Handle browser back button (popstate event)
+    window.addEventListener('popstate', () => {
+      // Trigger the same back button behavior as if clicking "Back to Albums"
+      fetchFolders(galleryDiv, titleElement, backButton, openAlbum);
+      document.getElementById('uploadSection').style.display = 'none';  // Hide upload section
+      backButton.classList.add('back-button-hidden');  // Hide the back button
+    });
+
+    // Example usage of fetchFolders inside your page initialization
+    window.onload = () => {
+      fetchFolders(galleryDiv, titleElement, backButton, openAlbum);
+    };
   </script>
 </body>
 

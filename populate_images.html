@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Populate Images Table</title>
+    <title>Sync Images Table</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -33,8 +33,8 @@
 </head>
 
 <body>
-    <h1>Populate Images Table</h1>
-    <button id="populateButton">Run Script to Populate Table</button>
+    <h1>Sync Images Table</h1>
+    <button id="syncButton">Run Script to Sync Images Table</button>
     <p id="status"></p>
 
     <script type="module">
@@ -47,11 +47,11 @@
 
         const bucket = "photography.1";  // Your Supabase bucket name
 
-        async function populateImagesTable() {
+        async function syncImagesTable() {
             const statusElement = document.getElementById('status');
-            statusElement.textContent = "Fetching albums...";
+            statusElement.textContent = "Fetching data from storage and database...";
 
-            // Fetch all folders (albums)
+            // Fetch all folders (albums) from storage
             const { data: folders, error: folderError } = await supabase.storage
                 .from(bucket)
                 .list('', { limit: 100 });
@@ -62,48 +62,106 @@
                 return;
             }
 
+            // Fetch all entries from the 'images' table in the database
+            const { data: imageRecords, error: dbError } = await supabase
+                .from('images')
+                .select('id, image_name, storage_path, type, likes');
+
+            if (dbError) {
+                console.error('Error fetching images from database:', dbError);
+                statusElement.textContent = "Error fetching images from database.";
+                return;
+            }
+
+            const storagePaths = [];  // To keep track of storage paths found in Supabase
+
             // Iterate through each folder (album)
             for (const folder of folders) {
                 if (!folder.name.includes('.')) {  // Ensure it's a folder, not a file
                     statusElement.textContent = `Processing album: ${folder.name}`;
 
-                    // Fetch all images in this folder (album)
-                    const { data: images, error: imageError } = await supabase.storage
+                    // Fetch all files (images and videos) in this folder (album)
+                    const { data: files, error: fileError } = await supabase.storage
                         .from(bucket)
                         .list(folder.name, { limit: 100 });
 
-                    if (imageError) {
-                        console.error(`Error fetching images for album ${folder.name}:`, imageError);
+                    if (fileError) {
+                        console.error(`Error fetching files for album ${folder.name}:`, fileError);
                         continue;
                     }
 
-                    // Insert each image metadata into the "images" table
-                    for (const image of images) {
-                        if (!image.name.includes('.')) continue;  // Skip any subfolders, only handle files
+                    // Process each image or video file
+                    for (const file of files) {
+                        if (!file.name.includes('.')) continue;  // Skip any subfolders, only handle files
 
-                        const storagePath = `${folder.name}/${image.name}`;
-                        const { error: insertError } = await supabase
-                            .from('images')
-                            .insert({
-                                image_name: image.name,
-                                album_name: folder.name,
-                                storage_path: storagePath,
-                                likes: 0  // Initialize likes to 0
-                            });
+                        const storagePath = `${folder.name}/${file.name}`;
+                        storagePaths.push(storagePath);  // Keep track of all files in storage
 
-                        if (insertError) {
-                            console.error(`Error inserting metadata for image ${image.name}:`, insertError);
+                        // Determine the file type based on the file extension
+                        const fileType = file.name.match(/\.(jpg|jpeg|png|gif)$/i) ? 'image' :
+                            file.name.match(/\.(mp4|mov|webm)$/i) ? 'video' : 'unknown';
+
+                        // Check if the entry exists in the 'images' table
+                        const existingRecord = imageRecords.find(record => record.storage_path === storagePath);
+
+                        if (existingRecord) {
+                            // Entry exists, check if type is correct or missing
+                            if (!existingRecord.type || existingRecord.type !== fileType) {
+                                // Update the type without altering the likes
+                                const { error: updateError } = await supabase
+                                    .from('images')
+                                    .update({ type: fileType })
+                                    .eq('id', existingRecord.id);
+
+                                if (updateError) {
+                                    console.error(`Error updating type for ${storagePath}:`, updateError);
+                                } else {
+                                    console.log(`Updated type for ${storagePath} to ${fileType}`);
+                                }
+                            }
                         } else {
-                            console.log(`Inserted metadata for image ${image.name}`);
+                            // Entry is missing, insert it with zero likes and appropriate type
+                            const { error: insertError } = await supabase
+                                .from('images')
+                                .insert({
+                                    image_name: file.name,
+                                    album_name: folder.name,
+                                    storage_path: storagePath,
+                                    type: fileType,
+                                    likes: 0  // Initialize likes to 0 for new entries
+                                });
+
+                            if (insertError) {
+                                console.error(`Error inserting ${storagePath}:`, insertError);
+                            } else {
+                                console.log(`Inserted ${storagePath} with type ${fileType}`);
+                            }
                         }
                     }
                 }
             }
 
-            statusElement.textContent = "Completed populating images table!";
+            // Step 2: Remove entries from the database that are no longer in storage
+            for (const record of imageRecords) {
+                if (!storagePaths.includes(record.storage_path)) {
+                    // Entry exists in the database but no longer in storage, delete it
+                    const { error: deleteError } = await supabase
+                        .from('images')
+                        .delete()
+                        .eq('id', record.id);
+
+                    if (deleteError) {
+                        console.error(`Error deleting ${record.storage_path}:`, deleteError);
+                    } else {
+                        console.log(`Deleted ${record.storage_path} from database (no longer in storage)`);
+                    }
+                }
+            }
+
+            statusElement.textContent = "Sync completed!";
         }
 
-        document.getElementById('populateButton').addEventListener('click', populateImagesTable);
+        document.getElementById('syncButton').addEventListener('click', syncImagesTable);
     </script>
 </body>
 
