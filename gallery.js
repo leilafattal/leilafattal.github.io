@@ -7,6 +7,9 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 export const bucket = "photography.1";  // Your Supabase bucket name
 
+// Placeholder image for new albums
+const placeholderImageURL = 'album_placeholder.jpeg';
+
 // Fetch and display folders in the gallery
 export async function fetchFolders(galleryDiv, titleElement, backButton, onAlbumClick) {
     const { data: items, error } = await supabase.storage
@@ -34,38 +37,49 @@ export async function fetchFolders(galleryDiv, titleElement, backButton, onAlbum
         const albumCover = document.createElement('div');
         albumCover.classList.add('album-cover');
 
-        // Fetch the first image or video from the folder
+        // Fetch all files in the folder (album)
         const { data: mediaFiles, error: mediaError } = await supabase.storage
             .from(bucket)
-            .list(folder.name, { limit: 1 });
+            .list(folder.name, { limit: 10 });
 
-        if (mediaError || mediaFiles.length === 0) {
+        if (mediaError) {
             console.error(mediaError || 'No media found in the folder');
             return;
         }
 
-        const firstFile = mediaFiles[0];
-        const filePublicUrl = supabase.storage.from(bucket).getPublicUrl(`${folder.name}/${firstFile.name}`).data.publicUrl;
-
         let mediaElement;
+        let previewURL = placeholderImageURL;  // Default to the placeholder image
+        let hasRealFiles = false;
 
-        // Check if the first item is a video
-        if (firstFile.name.match(/\.(mp4|mov|webm)$/i)) {
-            // Create a video element for the video file
-            mediaElement = document.createElement('video');
-            mediaElement.src = filePublicUrl;
-            mediaElement.autoplay = true;  // Autoplay video
-            mediaElement.muted = true;  // Mute video
-            mediaElement.loop = true;  // Loop video
-            mediaElement.playsInline = true;  // Play inline on mobile devices
-            mediaElement.style.width = '100%';  // Make the video fit the container
-            mediaElement.style.height = '100%';  // Ensure height fits as well
+        // Check if the folder contains only the .placeholder file
+        if (mediaFiles.length > 0 && !(mediaFiles.length === 1 && mediaFiles[0].name === '.placeholder')) {
+            hasRealFiles = true;
+            const firstFile = mediaFiles[0].name === '.placeholder' ? mediaFiles[1] : mediaFiles[0];
+            previewURL = supabase.storage.from(bucket).getPublicUrl(`${folder.name}/${firstFile.name}`).data.publicUrl;
+
+            if (firstFile.name.match(/\.(mp4|mov|webm)$/i)) {
+                // Create a video element for the video file
+                mediaElement = document.createElement('video');
+                mediaElement.src = previewURL;
+                mediaElement.autoplay = true;  // Autoplay video
+                mediaElement.muted = true;  // Mute video
+                mediaElement.loop = true;  // Loop video
+                mediaElement.playsInline = true;  // Play inline on mobile devices
+                mediaElement.style.width = '100%';  // Make the video fit the container
+                mediaElement.style.height = '100%';  // Ensure height fits as well
+            } else {
+                // Create an image element for the image file
+                mediaElement = document.createElement('img');
+                mediaElement.src = previewURL;
+                mediaElement.style.width = '100%';
+                mediaElement.style.height = '100%';  // Ensure it fits the container
+            }
         } else {
-            // Create an image element for the image file
+            // If the album is empty (only .placeholder), use the placeholder image
             mediaElement = document.createElement('img');
-            mediaElement.src = filePublicUrl;
+            mediaElement.src = placeholderImageURL;
             mediaElement.style.width = '100%';
-            mediaElement.style.height = '100%';  // Optional: ensure height fits as well
+            mediaElement.style.height = '100%';
         }
 
         const titleElement = document.createElement('div');
