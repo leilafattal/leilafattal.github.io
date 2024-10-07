@@ -282,6 +282,12 @@ export async function fetchAlbumImages(albumName, galleryDiv, titleElement, back
             imgElement.src = publicURL;
             imgElement.style.width = '100%';
             imgElement.style.height = '100%';  // Ensure it fits the container
+
+            // Add event listener to open image in full screen on click
+            imgElement.addEventListener('click', () => {
+                openFullScreenMedia(publicURL, 'image');
+            });
+
             mediaItem.appendChild(imgElement);
         } else if (fileType === 'video') {
             const videoElement = document.createElement('video');
@@ -292,6 +298,12 @@ export async function fetchAlbumImages(albumName, galleryDiv, titleElement, back
             videoElement.playsInline = true;  // Play inline on mobile devices
             videoElement.style.width = '100%';  // Make the video fit the container
             videoElement.style.height = '100%';  // Ensure height fits as well
+
+            // Add event listener to open video in full screen on click
+            videoElement.addEventListener('click', () => {
+                openFullScreenMedia(publicURL, 'video');
+            });
+
             mediaItem.appendChild(videoElement);
         }
 
@@ -305,6 +317,46 @@ export async function fetchAlbumImages(albumName, galleryDiv, titleElement, back
     titleElement.textContent = albumName;
     backButton.style.display = 'block';
 }
+
+// Get the overlay elements
+const mediaOverlay = document.getElementById('mediaOverlay');
+//const overlayContent = document.getElementById('overlayContent');
+const closeOverlay = document.getElementById('closeOverlay');
+
+// Function to open the media in full screen overlay
+function openFullScreenMedia(mediaURL, mediaType) {
+    const mediaElements = mediaOverlay.querySelectorAll('img, video'); // Select all img and video elements
+    mediaElements.forEach(element => element.remove()); // Remove each element
+
+    let mediaElement;
+
+    if (mediaType === 'image') {
+        // Create an image element
+        mediaElement = document.createElement('img');
+        mediaElement.src = mediaURL;
+    } else if (mediaType === 'video') {
+        // Create a video element
+        mediaElement = document.createElement('video');
+        mediaElement.src = mediaURL;
+        mediaElement.controls = true;
+        mediaElement.autoplay = true;
+    }
+
+    mediaOverlay.appendChild(mediaElement);
+    mediaOverlay.style.display = 'flex'; // Show the overlay
+}
+
+// Close the overlay when the close button is clicked
+closeOverlay.addEventListener('click', () => {
+    mediaOverlay.style.display = 'none';
+});
+
+// Close the overlay when clicking outside the content
+mediaOverlay.addEventListener('click', (event) => {
+    if (event.target === mediaOverlay) {
+        mediaOverlay.style.display = 'none';
+    }
+});
 
 // Like an image
 export async function likeImage(imageId, button) {

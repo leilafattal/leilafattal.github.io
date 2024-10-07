@@ -91,36 +91,47 @@ body {
     /* Hide the button initially or when it's not needed */
 }
 
-.overlay {
+/* Full-screen transparent overlay */
+.media-overlay {
+    display: none; /* Hidden by default */
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.8);
-    display: none;
-    align-items: center;
+    background-color: rgba(0, 0, 0, 0.8); /* Black background with transparency */
+    z-index: 1000; /* Ensure it appears above everything else */
     justify-content: center;
+    align-items: center;
+    overflow: auto;
 }
 
-.overlay img {
-    max-width: 90%;
-    max-height: 90%;
-    border-radius: 10px;
-    opacity: 1;
-    transition: none;
-}
-
-.overlay.show {
+/* The content inside the overlay (image or video) */
+.overlay-content {
+    max-width: 90%; 
+    max-height: 90%; 
     display: flex;
+    justify-content: center;
+    align-items: center;
 }
 
-.close-btn {
+/* Ensuring the image or video inside the overlay scales properly */
+.media-overlay img,
+.media-overlay video {
+    max-width: 90%; /* Prevent the media from exceeding the container's width */
+    max-height: 90%; /* Prevent the media from exceeding the container's height */
+    object-fit: contain; /* Maintain aspect ratio, contain within the container */
+    border-radius: 10px;
+}
+
+/* Close button for the overlay */
+.close-overlay {
     position: absolute;
     top: 20px;
-    right: 20px;
-    font-size: 24px;
+    right: 30px;
     color: white;
+    font-size: 40px;
+    font-weight: bold;
     cursor: pointer;
 }
 
