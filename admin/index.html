@@ -32,6 +32,14 @@
   <!-- Image Gallery Section -->
   <div class="gallery" id="gallery"></div>
 
+  <!-- Full-screen overlay for displaying media -->
+  <div id="mediaOverlay" class="media-overlay">
+    <span id="closeOverlay" class="close-overlay">&times;</span>
+    <div id="overlayContent" class="overlay-content">
+      <!-- The media (image or video) will be injected here -->
+    </div>
+  </div>
+
   <script type="module">
     import { fetchAdminFolders, fetchAlbumImages, supabase, bucket } from '../gallery.js';
 
