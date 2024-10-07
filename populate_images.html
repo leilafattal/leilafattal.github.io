@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Populate Images Table</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Populate Images Table</h1>
+    <button id="populateButton">Run Script to Populate Table</button>
+    <p id="status"></p>
+
+    <script type="module">
+        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+
+        // Initialize Supabase
+        const supabaseUrl = 'https://kfrjmqebnjwpnzafbwys.supabase.co';  // Replace with your Supabase URL
+        const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtmcmptcWVibmp3cG56YWZid3lzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTcyNzkxMzE0OSwiZXhwIjoyMDQzNDg5MTQ5fQ.XTHT8deRRj95NbPu4zysBACmv9sj-_kSowKLJ6E-zMw';  // Replace with your public anon key
+        const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+        const bucket = "photography.1";  // Your Supabase bucket name
+
+        async function populateImagesTable() {
+            const statusElement = document.getElementById('status');
+            statusElement.textContent = "Fetching albums...";
+
+            // Fetch all folders (albums)
+            const { data: folders, error: folderError } = await supabase.storage
+                .from(bucket)
+                .list('', { limit: 100 });
+
+            if (folderError) {
+                console.error('Error fetching folders:', folderError);
+                statusElement.textContent = "Error fetching folders.";
+                return;
+            }
+
+            // Iterate through each folder (album)
+            for (const folder of folders) {
+                if (!folder.name.includes('.')) {  // Ensure it's a folder, not a file
+                    statusElement.textContent = `Processing album: ${folder.name}`;
+
+                    // Fetch all images in this folder (album)
+                    const { data: images, error: imageError } = await supabase.storage
+                        .from(bucket)
+                        .list(folder.name, { limit: 100 });
+
+                    if (imageError) {
+                        console.error(`Error fetching images for album ${folder.name}:`, imageError);
+                        continue;
+                    }
+
+                    // Insert each image metadata into the "images" table
+                    for (const image of images) {
+                        if (!image.name.includes('.')) continue;  // Skip any subfolders, only handle files
+
+                        const storagePath = `${folder.name}/${image.name}`;
+                        const { error: insertError } = await supabase
+                            .from('images')
+                            .insert({
+                                image_name: image.name,
+                                album_name: folder.name,
+                                storage_path: storagePath,
+                                likes: 0  // Initialize likes to 0
+                            });
+
+                        if (insertError) {
+                            console.error(`Error inserting metadata for image ${image.name}:`, insertError);
+                        } else {
+                            console.log(`Inserted metadata for image ${image.name}`);
+                        }
+                    }
+                }
+            }
+
+            statusElement.textContent = "Completed populating images table!";
+        }
+
+        document.getElementById('populateButton').addEventListener('click', populateImagesTable);
+    </script>
+</body>
+
+</html>

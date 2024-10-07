@@ -58,18 +58,17 @@
       box-sizing: border-box;
     }
 
-    .gallery-image {
-      width: 200px;
-      margin: 10px;
-      border-radius: 10%;
-      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-      transition: box-shadow 0.3s ease, transform 0.5s ease;
+    .album-cover div button {
+      background-color: transparent;
+      border: none;
+      color: white;
+      font-size: 1.2em;
+      cursor: pointer;
+      transition: transform 0.3s ease;
     }
 
-    .gallery-image:hover {
-      transform: scale(1.05);
-      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
-      cursor: pointer;
+    .album-cover div button:hover {
+      transform: scale(1.3);
     }
 
     .back-button {
@@ -88,6 +87,7 @@
       width: 100%;
       height: 100%;
       background-color: rgba(0, 0, 0, 0.8);
+      /* Semi-transparent background */
       display: none;
       align-items: center;
       justify-content: center;
@@ -97,12 +97,10 @@
       max-width: 90%;
       max-height: 90%;
       border-radius: 10px;
-      opacity: 0.8;
-      transition: opacity 0.3s ease;
-    }
-
-    .overlay.show img:hover {
       opacity: 1;
+      /* Always fully opaque */
+      transition: none;
+      /* Remove any transition for opacity */
     }
 
     .overlay.show {
@@ -117,7 +115,7 @@
       color: white;
       cursor: pointer;
     }
-</style>  
+  </style>
 </head>
 
 <body>
@@ -217,15 +215,38 @@
       const galleryDiv = document.getElementById('gallery');
       galleryDiv.innerHTML = '';  // Clear current gallery
 
+      // Fetch image metadata from database
+      const { data: metadata, error: metaError } = await supabase
+        .from('images')
+        .select('id, image_name, likes')
+        .eq('album_name', albumName);
+
+      if (metaError) {
+        console.error('Error fetching image metadata:', metaError);
+        return;
+      }
+
       images.forEach(async (file) => {
         const publicURL = supabase.storage.from(bucket).getPublicUrl(`${albumName}/${file.name}`).data.publicUrl;
-        const imageItem = document.createElement('img');
-        imageItem.src = publicURL;
-        imageItem.classList.add('gallery-image'); // Add a class for styling
+        const meta = metadata.find(m => m.image_name === file.name);
+        const likes = meta ? meta.likes : 0;
+        const imageId = meta ? meta.id : null;
+
+        const imageItem = document.createElement('div');
+        imageItem.classList.add('album-cover'); // Reuse .album-cover styling
+
+        const imgElement = document.createElement('img');
+        imgElement.src = publicURL;
+
+        const infoElement = document.createElement('div');
+        infoElement.innerHTML = `<button onclick="likeImage('${imageId}', this)">❤️</button> ${likes}`;
+
+        imageItem.appendChild(imgElement);
+        imageItem.appendChild(infoElement);
         galleryDiv.appendChild(imageItem);
 
         // Add click event for zooming (overlay)
-        imageItem.addEventListener('click', () => {
+        imgElement.addEventListener('click', () => {
           const zoomedImage = document.getElementById('zoomedImage');
           zoomedImage.src = publicURL;
           document.getElementById('overlay').classList.add('show');
@@ -233,10 +254,51 @@
       });
 
       // Update gallery title with the album name
-
       document.getElementById('galleryTitle').textContent = albumName;
       // Show the back button
       document.getElementById('backButton').style.display = 'block';
+    }
+
+    // Like an image
+    async function likeImage(imageId, button) {
+      if (!imageId) {
+        console.error('Invalid image ID for liking');
+        return;
+      }
+
+      // First, get the current like count
+      const { data: currentData, error: currentError } = await supabase
+        .from('images')
+        .select('likes')
+        .eq('id', imageId)
+        .single();
+
+      if (currentError) {
+        console.error('Error fetching current likes:', currentError);
+        return;
+      }
+
+      const currentLikes = currentData.likes;
+
+      // Increment the like count
+      const newLikes = currentLikes + 1;
+
+      // Update the like count in the database
+      const { data, error } = await supabase
+        .from('images')
+        .update({ likes: newLikes })
+        .eq('id', imageId)
+        .select('likes');
+
+      if (error) {
+        console.error('Error updating likes:', error);
+        return;
+      }
+
+      // Update the like count in the UI
+      if (data && data.length > 0) {
+        button.parentElement.innerHTML = `<button onclick="likeImage('${imageId}', this)">❤️</button> ${data[0].likes}`;
+      }
     }
 
     // Back to the main gallery view
@@ -258,6 +320,8 @@
 
     // Fetch folders on page load
     window.onload = fetchFolders;
+    // Expose likeImage to the global scope
+    window.likeImage = likeImage;
   </script>
 </body>
 
