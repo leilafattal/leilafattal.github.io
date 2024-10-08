@@ -89,12 +89,18 @@
         if (fileType === 'image') {
           const imgElement = document.createElement('img');
           imgElement.src = publicURL;
+          imgElement.style.width = '100%';
+          imgElement.style.height = '100%';  // Ensure it fits the container
           imageItem.appendChild(imgElement);
         } else if (fileType === 'video') {
           const videoElement = document.createElement('video');
           videoElement.src = publicURL;
-          videoElement.controls = true;  // Add video controls (play/pause, etc.)
-          videoElement.style.width = '100%';  // Make video fit the container
+          videoElement.autoplay = true;  // Autoplay video
+          videoElement.muted = true;  // Mute video
+          videoElement.loop = true;  // Loop video
+          videoElement.playsInline = true;  // Play inline on mobile devices
+          videoElement.style.width = '100%';  // Make the video fit the container
+          videoElement.style.height = '100%';  // Ensure height fits as well
           imageItem.appendChild(videoElement);
         }
 
