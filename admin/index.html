@@ -355,7 +355,7 @@
     // Handle browser back button (popstate event)
     window.addEventListener('popstate', () => {
       // Trigger the same back button behavior as if clicking "Back to Albums"
-      fetchFolders(galleryDiv, titleElement, backButton, openAlbum);
+      fetchAdminFolders(galleryDiv, titleElement, backButton, openAlbum);
       document.getElementById('uploadSection').style.display = 'none';  // Hide upload section
       backButton.classList.add('back-button-hidden');  // Hide the back button
     });
